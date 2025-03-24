@@ -3,15 +3,17 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc"
+    "buildContent": "vite build -m content",
+    "buildBackground": "vite build -m background",
+    "build": "npm run buildContent && npm run buildBackground"
   },
   "author": "",
+  "type": "module",
   "license": "ISC",
-  "dependencies": {},
   "devDependencies": {
     "@types/chrome": "^0.0.307",
     "chrome-types": "^0.1.345",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2"
   }
 }

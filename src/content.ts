@@ -1,67 +1,12 @@
-interface ICommonMessage<R, S> {
-  type: R;
-  data: S;
-}
-
-interface IResponseData {
-  response: any;
-  isJson: boolean;
-  url: string;
-}
-
-interface IRequestData {
-  action: "working_hours";
-}
-
-interface ITimeResponse {
-  data: {
-    date: { value: string | null; formatted: string | null };
-    totalForToday: number;
-    difference: number;
-  };
-}
+import {
+  waitForAllQuerySelectors,
+  injectScript,
+  observeDomChanges,
+  getElementTopPos,
+  pxToNumber,
+} from "./common/utils";
 
 const workdayTableRequest = "/task/2997$4767.htmld";
-
-function injectScript(src: string) {
-  const s = document.createElement("script");
-  s.src = chrome.runtime.getURL(src);
-  s.type = "module";
-  s.onload = () => s.remove();
-  (document.head || document.documentElement).append(s);
-}
-
-function waitForAllQuerySelectors(selectors: string[]) {
-  type returnType = Element[][];
-  type queryType = (Element[] | null)[];
-  return new Promise<returnType>((res, _) => {
-    new Promise<{ id: number; data: returnType }>((resolveInterval, _) => {
-      const id = setInterval(() => {
-        const resolved: queryType = [];
-        for (const selector of selectors) {
-          const queryRes = document.querySelectorAll(selector);
-          resolved.push(
-            queryRes && queryRes.length > 0 ? Array.from(queryRes) : null
-          );
-        }
-        if (resolved.indexOf(null) === -1) {
-          resolveInterval({ id: id, data: resolved as returnType });
-        }
-      }, 500);
-    }).then(({ id, data }) => {
-      clearInterval(id);
-      res(data);
-    });
-  });
-}
-
-function getElementTopPos(e: Element) {
-  return pxToNumber(window.getComputedStyle(e).top);
-}
-
-function pxToNumber(s: string) {
-  return Number.parseFloat(s.replace("px", ""));
-}
 
 function removeTags() {
   waitForAllQuerySelectors([
@@ -139,6 +84,9 @@ function addTimeDifference() {
             r.data.totalForToday +
             r.data.difference / (1000 * 60 * 60)
           ).toFixed(2);
+
+          if (label.innerHTML === `Hours: ${newTime}`) return;
+
           label.innerHTML = `Hours: ${newTime}`;
         });
       }
@@ -198,30 +146,12 @@ function observePageNavigation() {
 }
 
 function observeTableChanges() {
-  let container;
-  new Promise<{ id: number; container: Element }>((res, _) => {
-    let id = setInterval(() => {
-      container = document.querySelector(
-        "[data-automation-id=entriesContainer]"
-      );
-
-      if (!(container === null)) {
-        res({ id, container });
-      }
-    }, 500);
-  }).then(({ id, container }) => {
-    clearInterval(id);
-    const observer = new MutationObserver(function (mutations) {
-      mutations.forEach(function (mutation) {
-        if (mutation.type == "childList") {
-          runAllTableMutations();
-        }
-      });
-    });
-    observer.observe(container, {
-      childList: true,
-    });
-  });
+  observeDomChanges(
+    ["[data-automation-id=entriesContainer]", "[id*=wd-Calendar]"],
+    () => {
+      runAllTableMutations();
+    }
+  );
 }
 
 // run
@@ -229,9 +159,9 @@ function observeTableChanges() {
 injectScript("js/request-patch.js");
 
 observePageNavigation();
+observeTableChanges();
 
 window.addEventListener("load", () => {
   registerResponseDataPass();
-  observeTableChanges();
   runAllTableMutations();
 });
